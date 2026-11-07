@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insert Records | Zunera's DMS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="brand"><div class="brand-mark">✦</div>
+        <span>Zunera's Digital<br>Document Management System</span>
+    </div>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a class="active" href="insert.html">Insert</a>
+        <a href="update.html">Update</a>
+        <a href="delete.html">Delete</a>
+        <a href="list.html">List</a>
+        <a href="listOne.html">Search</a>
+    </div>
+</nav>
+
+<main class="container">
+    <div class="page-layout">
+        <img src="images/insert.jpg" class="page-image" alt="Insert records">
+
+        <section class="card">
+            <h2>＋ Insert New Record</h2>
+            <p class="subtitle">Choose a table and enter the information to add a new record.</p>
+
+            <div class="field">
+                <label for="tableSelect">Select Table</label>
+                <select id="tableSelect">
+                    <option value="">-- Select Table --</option>
+                    <option value="users">Users</option>
+                    <option value="categories">Categories</option>
+                    <option value="documents">Documents</option>
+                    <option value="document_access">Document Access</option>
+                </select>
+            </div>
+
+            <form id="insertForm">
+                <div id="dynamicFields" class="form-grid"></div>
+                <div class="actions">
+                    <button class="btn btn-primary" type="submit">＋ Insert Record</button>
+                    <button class="btn btn-secondary" type="reset">↻ Reset</button>
+                </div>
+            </form>
+
+            <div id="message" class="message"></div>
+        </section>
+    </div>
+</main>
+
+<footer class="footer">© 2026 Zunera's Digital Document Management System</footer>
+
+<script>
+const API_BASE = "http://localhost:3000";
+
+const fields = {
+    users: [
+        ["name", "Full Name", "text"],
+        ["email", "Email Address", "email"],
+        ["password", "Password", "password"],
+        ["role", "Role", "text"]
+    ],
+    categories: [
+        ["category_name", "Category Name", "text"],
+        ["description", "Description", "textarea"]
+    ],
+    documents: [
+        ["user_id", "User", "users"],
+        ["category_id", "Category", "categories"],
+        ["title", "Document Title", "text"],
+        ["file_name", "File Name", "text"],
+        ["file_path", "File Path", "text"],
+        ["upload_date", "Upload Date", "datetime-local"],
+        ["status", "Status", "text"]
+    ],
+    document_access: [
+        ["document_id", "Document", "documents"],
+        ["user_id", "User", "users"],
+        ["permission", "Permission", "text"],
+        ["granted_date", "Granted Date", "datetime-local"]
+    ]
+};
+
+const tableSelect = document.getElementById("tableSelect");
+const dynamicFields = document.getElementById("dynamicFields");
+const form = document.getElementById("insertForm");
+
+tableSelect.addEventListener("change", buildForm);
+
+function showMessage(text, type) {
+    const box = document.getElementById("message");
+    box.textContent = text;
+    box.className = "message show " + type;
+}
+
+async function buildForm() {
+    dynamicFields.innerHTML = "";
+    const table = tableSelect.value;
+    if (!table) return;
+
+    for (const [name, label, type] of fields[table]) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "field";
+
+        const labelElement = document.createElement("label");
+        labelElement.textContent = label;
+        labelElement.htmlFor = "field_" + name;
+        wrapper.appendChild(labelElement);
+
+        let input;
+
+        if (type === "textarea") {
+            input = document.createElement("textarea");
+        } else if (type === "users" || type === "categories" || type === "documents") {
+            input = document.createElement("select");
+            input.innerHTML = '<option value="">-- Select ' + label + ' --</option>';
+
+            try {
+                const response = await fetch(`${API_BASE}/${type}`);
+                if (!response.ok) throw new Error("Unable to load " + type);
+
+                const records = await response.json();
+
+                const idField = {
+                    users: "user_id",
+                    categories: "category_id",
+                    documents: "document_id"
+                }[type];
+
+                records.forEach(record => {
+                    const option = document.createElement("option");
+                    option.value = record[idField];
+
+                    const displayName =
+                        record.name ||
+                        record.category_name ||
+                        record.title ||
+                        ("Record " + record[idField]);
+
+                    option.textContent = record[idField] + " - " + displayName;
+                    input.appendChild(option);
+                });
+            } catch (error) {
+                showMessage(error.message, "error");
+            }
+        } else {
+            input = document.createElement("input");
+            input.type = type;
+        }
+
+        input.id = "field_" + name;
+        input.name = name;
+        input.required = true;
+        wrapper.appendChild(input);
+        dynamicFields.appendChild(wrapper);
+    }
+}
+
+form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const table = tableSelect.value;
+    if (!table) {
+        showMessage("Please select a table.", "error");
+        return;
+    }
+
+    const body = {};
+    fields[table].forEach(([name]) => {
+        body[name] = document.getElementById("field_" + name).value;
+    });
+
+    try {
+        const response = await fetch(`${API_BASE}/${table}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+
+        const result = await response.text();
+
+        if (!response.ok) throw new Error(result || "Insert failed.");
+
+        showMessage("Record inserted successfully!", "success");
+        form.reset();
+        dynamicFields.innerHTML = "";
+        tableSelect.value = "";
+    } catch (error) {
+        showMessage(error.message, "error");
+    }
+});
+</script>
+
+</body>
+</html>

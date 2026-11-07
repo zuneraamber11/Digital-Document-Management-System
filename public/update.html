@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Records | Zunera's DMS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="brand"><div class="brand-mark">✦</div>
+        <span>Zunera's Digital<br>Document Management System</span>
+    </div>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="insert.html">Insert</a>
+        <a class="active" href="update.html">Update</a>
+        <a href="delete.html">Delete</a>
+        <a href="list.html">List</a>
+        <a href="listOne.html">Search</a>
+    </div>
+</nav>
+
+<main class="container">
+    <div class="page-layout">
+        <img src="images/update.jpg" class="page-image" alt="Update records">
+
+        <section class="card">
+            <h2>✎ Update Record</h2>
+            <p class="subtitle">Select a table and record. Load the existing values, make changes and save.</p>
+
+            <div class="field">
+                <label for="tableSelect">Select Table</label>
+                <select id="tableSelect">
+                    <option value="">-- Select Table --</option>
+                    <option value="users">Users</option>
+                    <option value="categories">Categories</option>
+                    <option value="documents">Documents</option>
+                    <option value="document_access">Document Access</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="recordSelect">Select Record</label>
+                <select id="recordSelect" disabled>
+                    <option value="">-- Select Record --</option>
+                </select>
+            </div>
+
+            <button type="button" class="btn btn-secondary" id="loadButton">↻ Load Record</button>
+
+            <form id="updateForm">
+                <div id="dynamicFields" class="form-grid" style="margin-top:20px;"></div>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">✓ Update Record</button>
+                    <button type="reset" class="btn btn-secondary">↻ Reset</button>
+                </div>
+            </form>
+
+            <div id="message" class="message"></div>
+        </section>
+    </div>
+</main>
+
+<footer class="footer">© 2026 Zunera's Digital Document Management System</footer>
+
+<script>
+const API_BASE = "http://localhost:3000";
+
+const config = {
+    users: {
+        id: "user_id",
+        fields: [
+            ["name", "Full Name", "text"],
+            ["email", "Email Address", "email"],
+            ["password", "Password", "password"],
+            ["role", "Role", "text"]
+        ],
+        label: r => r.user_id + " - " + r.name
+    },
+    categories: {
+        id: "category_id",
+        fields: [
+            ["category_name", "Category Name", "text"],
+            ["description", "Description", "textarea"]
+        ],
+        label: r => r.category_id + " - " + r.category_name
+    },
+    documents: {
+        id: "document_id",
+        fields: [
+            ["user_id", "User ID", "number"],
+            ["category_id", "Category ID", "number"],
+            ["title", "Document Title", "text"],
+            ["file_name", "File Name", "text"],
+            ["file_path", "File Path", "text"],
+            ["upload_date", "Upload Date", "datetime-local"],
+            ["status", "Status", "text"]
+        ],
+        label: r => r.document_id + " - " + r.title
+    },
+    document_access: {
+        id: "access_id",
+        fields: [
+            ["document_id", "Document ID", "number"],
+            ["user_id", "User ID", "number"],
+            ["permission", "Permission", "text"],
+            ["granted_date", "Granted Date", "datetime-local"]
+        ],
+        label: r => r.access_id + " - Document " + r.document_id
+    }
+};
+
+let selectedRecord = null;
+
+const tableSelect = document.getElementById("tableSelect");
+const recordSelect = document.getElementById("recordSelect");
+const dynamicFields = document.getElementById("dynamicFields");
+const updateForm = document.getElementById("updateForm");
+
+function message(text, type) {
+    const box = document.getElementById("message");
+    box.textContent = text;
+    box.className = "message show " + type;
+}
+
+tableSelect.addEventListener("change", async () => {
+    recordSelect.innerHTML = '<option value="">-- Select Record --</option>';
+    recordSelect.disabled = true;
+    dynamicFields.innerHTML = "";
+    selectedRecord = null;
+
+    const table = tableSelect.value;
+    if (!table) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/${table}`);
+        if (!response.ok) throw new Error("Unable to load records.");
+
+        const records = await response.json();
+
+        records.forEach(record => {
+            const option = document.createElement("option");
+            option.value = record[config[table].id];
+            option.textContent = config[table].label(record);
+            recordSelect.appendChild(option);
+        });
+
+        recordSelect.disabled = false;
+    } catch (error) {
+        message(error.message, "error");
+    }
+});
+
+document.getElementById("loadButton").addEventListener("click", async () => {
+    const table = tableSelect.value;
+    const id = recordSelect.value;
+
+    if (!table || !id) {
+        message("Please select a table and a record.", "error");
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/${table}/${id}`);
+        if (!response.ok) throw new Error("Unable to load selected record.");
+
+        const data = await response.json();
+        selectedRecord = Array.isArray(data) ? data[0] : data;
+
+        if (!selectedRecord) throw new Error("Record not found.");
+
+        buildUpdateFields(table, selectedRecord);
+        message("Record loaded. You can now edit its fields.", "success");
+    } catch (error) {
+        message(error.message, "error");
+    }
+});
+
+function buildUpdateFields(table, record) {
+    dynamicFields.innerHTML = "";
+
+    config[table].fields.forEach(([name, label, type]) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "field";
+
+        const lab = document.createElement("label");
+        lab.textContent = label;
+        lab.htmlFor = "edit_" + name;
+
+        let input = type === "textarea"
+            ? document.createElement("textarea")
+            : document.createElement("input");
+
+        if (input.tagName === "INPUT") input.type = type;
+
+        input.id = "edit_" + name;
+        input.name = name;
+
+        let value = record[name] ?? "";
+        if (type === "datetime-local" && value) {
+            value = String(value).replace(" ", "T").slice(0, 16);
+        }
+        input.value = value;
+
+        wrapper.appendChild(lab);
+        wrapper.appendChild(input);
+        dynamicFields.appendChild(wrapper);
+    });
+}
+
+updateForm.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const table = tableSelect.value;
+    const id = recordSelect.value;
+
+    if (!table || !id || !selectedRecord) {
+        message("Load a record before updating.", "error");
+        return;
+    }
+
+    const body = {};
+    config[table].fields.forEach(([name]) => {
+        body[name] = document.getElementById("edit_" + name).value;
+    });
+
+    try {
+        const response = await fetch(`${API_BASE}/${table}/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+
+        const result = await response.text();
+        if (!response.ok) throw new Error(result || "Update failed.");
+
+        message("Record updated successfully!", "success");
+    } catch (error) {
+        message(error.message, "error");
+    }
+});
+</script>
+
+</body>
+</html>

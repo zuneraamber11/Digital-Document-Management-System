@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Records | Zunera's DMS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="brand"><div class="brand-mark">✦</div>
+        <span>Zunera's Digital<br>Document Management System</span>
+    </div>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="insert.html">Insert</a>
+        <a href="update.html">Update</a>
+        <a class="active" href="delete.html">Delete</a>
+        <a href="list.html">List</a>
+        <a href="listOne.html">Search</a>
+    </div>
+</nav>
+
+<main class="container">
+    <div class="page-layout">
+        <img src="images/delete.jpg" class="page-image" alt="Delete records">
+
+        <section class="card">
+            <h2>⌫ Delete Record</h2>
+            <p class="subtitle">Choose the table and select the record you want to delete.</p>
+
+            <div class="field">
+                <label for="tableSelect">Select Table</label>
+                <select id="tableSelect">
+                    <option value="">-- Select Table --</option>
+                    <option value="users">Users</option>
+                    <option value="categories">Categories</option>
+                    <option value="documents">Documents</option>
+                    <option value="document_access">Document Access</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="recordSelect">Select Record</label>
+                <select id="recordSelect" disabled>
+                    <option value="">-- Select Record --</option>
+                </select>
+            </div>
+
+            <div class="notice">
+                ⚠️ Please check the selected record carefully. Deleting a record may affect related records in other tables.
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-danger" id="deleteButton" type="button">⌫ Delete Record</button>
+                <button class="btn btn-secondary" id="resetButton" type="button">↻ Reset</button>
+            </div>
+
+            <div id="message" class="message"></div>
+        </section>
+    </div>
+</main>
+
+<footer class="footer">© 2026 Zunera's Digital Document Management System</footer>
+
+<script>
+const API_BASE = "http://localhost:3000";
+
+const config = {
+    users: {
+        id: "user_id",
+        label: r => r.user_id + " - " + r.name
+    },
+    categories: {
+        id: "category_id",
+        label: r => r.category_id + " - " + r.category_name
+    },
+    documents: {
+        id: "document_id",
+        label: r => r.document_id + " - " + r.title
+    },
+    document_access: {
+        id: "access_id",
+        label: r => r.access_id + " - Document " + r.document_id
+    }
+};
+
+const tableSelect = document.getElementById("tableSelect");
+const recordSelect = document.getElementById("recordSelect");
+
+function showMessage(text, type) {
+    const box = document.getElementById("message");
+    box.textContent = text;
+    box.className = "message show " + type;
+}
+
+tableSelect.addEventListener("change", async () => {
+    recordSelect.innerHTML = '<option value="">-- Select Record --</option>';
+    recordSelect.disabled = true;
+
+    const table = tableSelect.value;
+    if (!table) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/${table}`);
+        if (!response.ok) throw new Error("Unable to load records.");
+
+        const records = await response.json();
+
+        records.forEach(record => {
+            const option = document.createElement("option");
+            option.value = record[config[table].id];
+            option.textContent = config[table].label(record);
+            recordSelect.appendChild(option);
+        });
+
+        recordSelect.disabled = false;
+
+        if (records.length === 0) {
+            showMessage("There are no records in this table.", "error");
+        }
+    } catch (error) {
+        showMessage(error.message, "error");
+    }
+});
+
+document.getElementById("deleteButton").addEventListener("click", async () => {
+    const table = tableSelect.value;
+    const id = recordSelect.value;
+
+    if (!table || !id) {
+        showMessage("Please select a table and a record.", "error");
+        return;
+    }
+
+    const selectedText = recordSelect.options[recordSelect.selectedIndex].text;
+
+    if (!confirm("Are you sure you want to delete:\n" + selectedText + " ?")) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/${table}/${id}`, {
+            method: "DELETE"
+        });
+
+        const result = await response.text();
+        if (!response.ok) throw new Error(result || "Delete failed.");
+
+        showMessage("Record deleted successfully!", "success");
+
+        const option = recordSelect.querySelector(`option[value="${id}"]`);
+        if (option) option.remove();
+
+        recordSelect.value = "";
+    } catch (error) {
+        showMessage(error.message, "error");
+    }
+});
+
+document.getElementById("resetButton").addEventListener("click", () => {
+    tableSelect.value = "";
+    recordSelect.innerHTML = '<option value="">-- Select Record --</option>';
+    recordSelect.disabled = true;
+    document.getElementById("message").className = "message";
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zunera's DMS | Home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="brand">
+        <div class="brand-mark">✦</div>
+        <span>Zunera's Digital<br>Document Management System</span>
+    </div>
+    <div class="nav-links">
+        <a class="active" href="index.html">Home</a>
+        <a href="insert.html">Insert</a>
+        <a href="update.html">Update</a>
+        <a href="delete.html">Delete</a>
+        <a href="list.html">List</a>
+        <a href="listOne.html">Search</a>
+    </div>
+</nav>
+
+<main class="container">
+    <section class="hero">
+        <div>
+            <h1>Welcome to <span>Zunera's Digital Document Management System</span></h1>
+            <p>Organize, manage and access your digital records with a simple and elegant document management system.</p>
+            <br>
+            <a href="insert.html" class="btn btn-primary">＋ Add New Record</a>
+        </div>
+        <img src="images/index.jpg" class="page-image" alt="Digital document management">
+    </section>
+
+    <h2 style="margin-top:30px;color:#171b46;">System Overview</h2>
+
+    <section class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <h3>Total Users</h3>
+            <strong id="usersCount">—</strong>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📁</div>
+            <h3>Categories</h3>
+            <strong id="categoriesCount">—</strong>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📄</div>
+            <h3>Documents</h3>
+            <strong id="documentsCount">—</strong>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🔐</div>
+            <h3>Access Records</h3>
+            <strong id="accessCount">—</strong>
+        </div>
+    </section>
+
+    <h2 style="color:#171b46;">Manage Your Data</h2>
+
+    <section class="quick-links">
+        <a href="insert.html" class="quick-link">
+            <strong>＋ Insert Records</strong>
+            <small>Add new users, categories, documents or access records.</small>
+        </a>
+        <a href="update.html" class="quick-link">
+            <strong>✎ Update Records</strong>
+            <small>Modify existing database information.</small>
+        </a>
+        <a href="delete.html" class="quick-link">
+            <strong>⌫ Delete Records</strong>
+            <small>Remove unwanted records from the database.</small>
+        </a>
+        <a href="list.html" class="quick-link">
+            <strong>☷ View All Records</strong>
+            <small>Display all records from a selected table.</small>
+        </a>
+        <a href="listOne.html" class="quick-link">
+            <strong>⌕ View One Record</strong>
+            <small>Search for a particular database record.</small>
+        </a>
+    </section>
+    <div id="homeMessage" class="message"></div>
+</main>
+
+<footer class="footer">© 2026 Zunera's Digital Document Management System</footer>
+
+<script>
+const API_BASE = "http://localhost:3000";
+
+async function loadCount(table, elementId) {
+    try {
+        const response = await fetch(`${API_BASE}/${table}`);
+        if (!response.ok) throw new Error("Could not load " + table);
+
+        const data = await response.json();
+        document.getElementById(elementId).textContent = data.length;
+    } catch (error) {
+        document.getElementById(elementId).textContent = "—";
+        console.error(error);
+    }
+}
+
+loadCount("users", "usersCount");
+loadCount("categories", "categoriesCount");
+loadCount("documents", "documentsCount");
+loadCount("document_access", "accessCount");
+</script>
+
+</body>
+</html>

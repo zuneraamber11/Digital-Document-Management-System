@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View All Records | Zunera's DMS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="brand"><div class="brand-mark">✦</div>
+        <span>Zunera's Digital<br>Document Management System</span>
+    </div>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="insert.html">Insert</a>
+        <a href="update.html">Update</a>
+        <a href="delete.html">Delete</a>
+        <a class="active" href="list.html">List</a>
+        <a href="listOne.html">Search</a>
+    </div>
+</nav>
+
+<main class="container">
+    <section class="card">
+        <div class="list-header">
+            <img src="images/list.jpg" class="page-image" alt="View all records">
+            <div>
+                <h2>☷ View All Records</h2>
+                <p class="subtitle">Browse all records stored in your selected database table.</p>
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="tableSelect">Select Table</label>
+            <select id="tableSelect">
+                <option value="">-- Select Table --</option>
+                <option value="users">Users</option>
+                <option value="categories">Categories</option>
+                <option value="documents">Documents</option>
+                <option value="document_access">Document Access</option>
+            </select>
+        </div>
+
+        <button class="btn btn-primary" id="viewButton">☷ View Records</button>
+
+        <div id="message" class="message"></div>
+
+        <div class="table-wrap">
+            <table id="recordsTable">
+                <thead id="tableHead">
+                    <tr><th>Information</th></tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td>Select a table to display records.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<footer class="footer">© 2026 Zunera's Digital Document Management System</footer>
+
+<script>
+const API_BASE = "http://localhost:3000";
+
+function showMessage(text, type) {
+    const box = document.getElementById("message");
+    box.textContent = text;
+    box.className = "message show " + type;
+}
+
+function formatValue(value) {
+    if (value === null || value === undefined || value === "") return "—";
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+}
+
+document.getElementById("viewButton").addEventListener("click", async () => {
+    const table = document.getElementById("tableSelect").value;
+
+    if (!table) {
+        showMessage("Please select a table.", "error");
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/${table}`);
+        if (!response.ok) throw new Error("Unable to retrieve records.");
+
+        const records = await response.json();
+        const head = document.getElementById("tableHead");
+        const body = document.getElementById("tableBody");
+
+        head.innerHTML = "";
+        body.innerHTML = "";
+
+        if (!Array.isArray(records) || records.length === 0) {
+            head.innerHTML = "<tr><th>Records</th></tr>";
+            body.innerHTML = "<tr><td>No records found in this table.</td></tr>";
+            showMessage("No records found.", "error");
+            return;
+        }
+
+        const columns = Object.keys(records[0]);
+        const headerRow = document.createElement("tr");
+
+        columns.forEach(column => {
+            const th = document.createElement("th");
+            th.textContent = column.replaceAll("_", " ").toUpperCase();
+            headerRow.appendChild(th);
+        });
+
+        head.appendChild(headerRow);
+
+        records.forEach(record => {
+            const row = document.createElement("tr");
+
+            columns.forEach(column => {
+                const td = document.createElement("td");
+                td.textContent = formatValue(record[column]);
+                row.appendChild(td);
+            });
+
+            body.appendChild(row);
+        });
+
+        showMessage(records.length + " record(s) found.", "success");
+    } catch (error) {
+        showMessage(error.message, "error");
+    }
+});
+</script>
+
+</body>
+</html>
